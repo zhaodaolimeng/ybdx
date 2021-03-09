@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title></title>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8">
+    <style>
+        p {
+            text-align: left;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="width: 400px;height: 600px;margin: 30px auto;text-align: center">
+        <h1>YBDX Game Arena</h1>
+        <div style="width: 600px;border: 1px solid gray;height: 300px;">
+            <div style="width: 200px;height: 300px;float: left;text-align: left;">
+                <p><span>current online:</span><span id="user_num">0</span></p>
+                <div id="user_list" style="overflow: auto;"></div>
+            </div>
+            <div id="msg_list" style="width: 398px;border:  1px solid gray; height: 300px;overflow: scroll;float: left;">
+            </div>
+        </div>
+        <br>
+        <input type="button" value="ready" onclick="ready()">
+        <br>
+        <!-- options -->
+        <select id="user_target"></select>
+        <input type="button" value="y" onclick="act_y()">
+        <input type="button" value="b" onclick="act_b()">
+        <input type="button" value="d" onclick="act_d()">
+        <input type="button" value="x" onclick="act_x()">
+        <input type="button" value="db" onclick="act_db()">
+        <br>
+        <textarea id="msg_box" rows="6" cols="50" onkeydown="confirm(event)"></textarea><br>
+        <input type="button" value="chat" onclick="send()">
+    </div>
+</body>
+
+</html>
+
+<script type="text/javascript">
+    // start with prompt
+    var uname = prompt('Enter username', 'user' + uuid(8, 16));
+    var ws = new WebSocket("ws://127.0.0.1:1234");
+
+    ws.onopen = function() {
+        var data = "msg: connected!";
+        listMsg(data);
+    };
+
+    // receiving message
+    ws.onmessage = function(e) {
+        var msg = JSON.parse(e.data);
+        var sender, user_name, name_list, change_type;
+
+        switch (msg.type) {
+            case 'system':
+                sender = 'system: ' + msg.content;
+                break;
+            case 'user':
+                sender = msg.from + ': ' + msg.content;
+                break;
+            case 'ready':
+                sender = msg.user + ' is ready!';
+                break;
+            case 'handshake':
+                var user_info = {
+                    'type': 'login',
+                    'content': uname
+                };
+                ws.send(JSON.stringify(user_info));
+                return;
+            case 'login':
+            case 'logout':
+                user_name = msg.content;
+                name_list = msg.user_list;
+                change_type = msg.type;
+                dealUser(user_name, change_type, name_list);
+                return;
+        }
+        var data = sender;
+        listMsg(data);
+    };
+
+    ws.onerror = function() {
+        var data = "system: error, try again.";
+        listMsg(data);
+    };
+
+    window.onbeforeunload = function() {　　
+        var user_info = {
+            'type': 'logout',
+            'content': uname
+        };
+        ws.send(JSON.stringify(user_info));
+        ws.close();
+    }
+
+    function confirm(event) {
+        var key_num = event.keyCode;
+        if (13 == key_num) {
+            send();
+        } else {
+            return false;
+        }
+    }
+
+    // -----------------
+
+    function ready() {
+        ws.send(JSON.stringify({'type':'ready','from':uname}))
+    }
+
+    function send() {
+        var msg_box = document.getElementById("msg_box");
+        var content = msg_box.value;
+        var reg = new RegExp("\r\n", "g");
+        content = content.replace(reg, "");
+        var msg = {
+            'content': content.trim(),
+            'type': 'send',
+            'from': uname
+        };
+        ws.send(JSON.stringify(msg));
+        msg_box.value = '';
+    }
+
+    function act_y(){
+        ws.send(JSON.stringify({'type':'act','action':'y','from':uname}));
+    }
+
+    function act_b(){
+        var tar = document.getElementById('user_target').value;
+        ws.send(JSON.stringify({'type':'act','from':uname,'action':'b','target':tar}));
+    }
+
+    function act_d(){
+        var tar = document.getElementById('user_target').value;
+        ws.send(JSON.stringify({'type':'act','from':uname,'action':'d'}));
+    }
+
+    function act_x(){
+        var tar = document.getElementById('user_target').value;
+        ws.send(JSON.stringify({'type':'act','from':uname,'action':'x','target':tar}));
+    }
+
+    function act_db(){
+        var tar = document.getElementById('user_target').value;
+        ws.send(JSON.stringify({'type':'act','from':uname,'action':'db','target':tar}));
+    }
+
+    // -----------------
+
+    // show messages
+    function listMsg(data) {
+        var msg_list = document.getElementById("msg_list");
+        var msg = document.createElement("p");
+
+        msg.innerHTML = data;
+        msg_list.appendChild(msg);
+        msg_list.scrollTop = msg_list.scrollHeight;
+    }
+
+    function dealUser(user_name, type, name_list) {
+        var user_list = document.getElementById("user_list");
+        var user_target = document.getElementById("user_target");
+        var user_num = document.getElementById("user_num");
+        while (user_list.hasChildNodes()) {
+            user_list.removeChild(user_list.firstChild);
+        }
+        while(user_target.hasChildNodes()){
+            user_target.removeChild(user_list.firstChild);
+        }
+
+        for (var index in name_list) {
+            var user = document.createElement("p");
+            user.innerHTML = name_list[index];
+            user_list.appendChild(user);
+            if(name_list[index] != uname) {
+                var useropt = document.createElement("option");
+                useropt.innerHTML = name_list[index];
+                useropt.value = name_list[index];
+                user_target.appendChild(useropt);
+            }
+        }
+        
+        user_num.innerHTML = name_list.length;
+        user_list.scrollTop = user_list.scrollHeight;
+        var data = 'system: ' + user_name + (type == 'login' ? 'login' : 'logout');
+        listMsg(data);
+    }
+
+    function uuid(len, radix) {
+        var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
+        var uuid = [],
+            i;
+        radix = radix || chars.length;
+        if (len) {
+            for (i = 0; i < len; i++) uuid[i] = chars[0 | Math.random() * radix];
+        } else {
+            var r;
+            uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
+            uuid[14] = '4';
+            for (i = 0; i < 36; i++) {
+                if (!uuid[i]) {
+                    r = 0 | Math.random() * 16;
+                    uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
+                }
+            }
+        }
+        return uuid.join('');
+    }
+</script>
