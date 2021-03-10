@@ -17,6 +17,7 @@
         <h1>YBDX Game Arena</h1>
         <div style="width: 600px;border: 1px solid gray;height: 300px;">
             <div style="width: 200px;height: 300px;float: left;text-align: left;">
+                <p><span>Welcome:</span><span id="username">0</span></p>
                 <p><span>current online:</span><span id="user_num">0</span></p>
                 <div id="user_list" style="overflow: auto;"></div>
             </div>
@@ -45,6 +46,8 @@
     // start with prompt
     var uname = prompt('Enter username', 'user' + uuid(8, 16));
     var ws = new WebSocket("ws://127.0.0.1:1234");
+    
+    document.getElementById("username").innerHTML = uname;
 
     ws.onopen = function() {
         var data = "msg: connected!";
@@ -172,7 +175,7 @@
             user_list.removeChild(user_list.firstChild);
         }
         while(user_target.hasChildNodes()){
-            user_target.removeChild(user_list.firstChild);
+            user_target.removeChild(user_target.firstChild);
         }
 
         for (var index in name_list) {

@@ -95,6 +95,13 @@ async def chat(websocket, path):
                 for u,_ in USERS.items():
                     USERS[u]['qi'] = 0
                     USERS[u]['is_dead'] = False
+                
+                # user's states
+                print('uname\tqi\tis_ready\tis_dead')
+                for k,v in USERS.items():
+                    print(k + '\t' + str(v['qi']) + '\t' + str(v['is_ready']) + '\t' + str(v['is_dead']))
+                
+                
                 message = json.dumps({"type": "system", "content": "All users ready, game start!"})
             else:
                 # show user is ready
@@ -110,11 +117,22 @@ async def chat(websocket, path):
         elif data["type"] == 'act':
             
             if GAME['started'] == False:
-                print('ERROR: game has not start')
+                message = json.dumps({
+                    "type":"system",
+                    "content":"ERROR: game has not start"
+                })
             elif USERS[data['from']]['handler'] != websocket:
                 print('ERROR: username does not match the ws fingerprint')
+                message = json.dumps({
+                    "type":"system",
+                    "content":"ERROR: username does not match the ws fingerprint"
+                })
             elif 'target' in USERS.keys() and USERS[data['target']]['is_dead']:
                 print('ERROR: target is already dead')
+                message = json.dumps({
+                    "type":"system",
+                    "content":"ERROR: target is already dead"
+                })
             
             else:
                 GAME['turn_stats'][data['from']] = {
@@ -124,7 +142,7 @@ async def chat(websocket, path):
                 
                 message = json.dumps({
                     "type": "system", 
-                    "content": data['from'] + " has act in turn " + GAME['turn']
+                    "content": data['from'] + " has act in turn " + str(GAME['turn'])
                 })
             
                 # if everyone has act, then broadcast actions and results
@@ -144,32 +162,43 @@ async def chat(websocket, path):
                             if u == user:
                                 continue
                             if sta['target'] == user and sta['action'] == 'b':
-                                b_from += u
+                                b_from.append(u)
                             if sta['target'] == user and sta['action'] == 'db':
-                                db_from += u
+                                db_from.append(u)
                             if sta['action'] == 'x':
-                                x_from += u
+                                x_from.append(u)
                             if sta['action'] == 'y':
-                                y_from += u
+                                y_from.append(u)
+                                
+                        print(json.dumps(b_from))
+                        print(json.dumps(db_from))
+                        print(json.dumps(x_from))
+                        print(json.dumps(y_from))
                         
                         if stats['action'] in ['y','x'] and (len(b_from)>0 or len(db_from)>0):
+                            print("hit rule 1")
                             USERS[user]['is_dead'] = True
                         
                         if stats['action'] == 'b':
-                            if not (len(db_from) == 0 and len(b_from) == 1 and b_from[0] == stats['target']):
+                            if (len(b_from)>0 or len(db_from)>0) and not (len(db_from) == 0 and len(b_from) == 1 and b_from[0] == stats['target']):
+                                print("hit rule 2")
                                 USERS[user]['is_dead'] = True
                         
                         if stats['action'] == 'db':
-                            if not (len(b_from) == 0 and len(db_from) == 1 and db_from[0] == stats['target']):
+                            if (len(b_from)>0 or len(db_from)>0) and not (len(b_from) == 0 and len(db_from) == 1 and db_from[0] == stats['target']):
+                                print("hit rule 3")
                                 USERS[user]['is_dead'] = True
                         
                         if stats['action'] == 'd' and len(db_from)>0:
+                            print("hit rule 4")
                             USERS[user]['is_dead'] = True
                             
                         if stats['action'] == 'db' and USERS[user]['qi']<3:
+                            print("hit rule 5")
                             USERS[user]['is_dead'] = True
                         
                         if stats['action'] == 'b' and USERS[user]['qi']<1:
+                            print("hit rule 6")
                             USERS[user]['is_dead'] = True
                     
                         # check user's action
@@ -185,36 +214,47 @@ async def chat(websocket, path):
                         if stats['action'] == 'db':
                             USERS[user]['qi'] -= 3
                     
-                    # if someone dead in this turn, all stats refresh
                     new_left = [u for u,sta in USERS.items() if not sta['is_dead']]
                     
                     # message summary
                     summary = json.dumps(GAME['turn_stats']) + ".\n"
                     summary += "Left users are: " + json.dumps(new_left) + "\n"
                     
-                    message = json.dumps({
-                        "type": "system", 
-                        "content": "Turn "+GAME['turn']+" end. Summary: " + summary
-                    })
+                    # user's states
+                    print('uname\tqi\tis_ready\tis_dead')
+                    for k,v in USERS.items():
+                        print(k + '\t' + str(v['qi']) + '\t' + str(v['is_ready']) + '\t' + str(v['is_dead']))
                     
                     if len(new_left) < len(left):
-                        # check if the game has a winner
-                        if len(new_left) ==  1:
-                            message = json.dumps({"type":"gameend","winner":new_left[0]})
-                            
-                            # clean game
-                            GAME['started'] == False
-                            for u,_ in USERS.items():
-                                USERS[u]['is_ready'] = False
-                        else:   
-                            GAME['turn'] += 1
-                            GAME['turn_stats'] = {}
+                        # if someone dead in this turn, all stats refresh
+                        for u,_ in USERS.items():
+                            USERS[u]['qi'] = 0
                     
+                    GAME['turn_stats'] = {}    
+                    
+                    message = json.dumps({
+                        "type": "system", 
+                        "content": "Turn " + str(GAME['turn']) + " end. Summary: " + summary
+                    })
+                    GAME['turn'] += 1
+                    
+                    if len(new_left) <= 1:
+                        # draw
+                        if len(new_left) == 0:
+                            message = json.dumps({"type":"system","content":"draw"})
+                        if len(new_left) == 1:
+                            # check if the game has a winner
+                            message = json.dumps({"type":"system","content": "winner: "+new_left[0]})
+                            
+                        # clean game
+                        GAME['started'] == False
+                        for u,_ in USERS.items():
+                            USERS[u]['is_ready'] = False
                 pass
         
         
-        print("----------")
-        print(len(USERS))
+        # print("----------")
+        # print(len(USERS))
         
         # boardcast
         await asyncio.wait([user['handler'].send(message) for user in USERS.values()])
