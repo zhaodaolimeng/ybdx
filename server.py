@@ -269,7 +269,7 @@ def index():
 
 
 WebSocketServer(
-    ('0.0.0.0', 80),
+    ('0.0.0.0'),
 
     Resource([
         ('^/chat', ChatApplication),
