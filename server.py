@@ -269,7 +269,7 @@ def index():
 
 
 WebSocketServer(
-    None,
+    ('0.0.0.0',int(os.environ.get('PORT', 5000))),
     Resource([
         ('^/chat', ChatApplication),
         ('^/.*', DebuggedApplication(flask_app))
