@@ -269,7 +269,7 @@ def index():
 
 
 WebSocketServer(
-    ('ybdx.heroku.com', 80),
+    ('0.0.0.0', 80),
 
     Resource([
         ('^/chat', ChatApplication),
