@@ -7,5 +7,9 @@
 - x = 吸
 - db = 大波，需要三个气
 
+## 截图
+
+<img src="docs/screenshot.png" alt="" width="600"/>
+
 based on https://github.com/wwwtyro/gevent-websocket
 
