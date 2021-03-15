@@ -43,16 +43,32 @@
 </html>
 
 <script type="text/javascript">
+
     // start with prompt
     var uname = prompt('Enter username', 'user' + uuid(8, 16));
-    var ws = new WebSocket("ws://127.0.0.1:1234");
+    var ws = new WebSocket("ws://ybdx.herokuapp.com/chat");
     
     document.getElementById("username").innerHTML = uname;
 
+    // open
     ws.onopen = function() {
         var data = "msg: connected!";
         listMsg(data);
+        ws.send(JSON.stringify({
+            'type': 'login',
+            'content': uname
+        }))
     };
+
+    // close
+    window.onbeforeunload = function() {　　
+        var user_info = {
+            'type': 'logout',
+            'content': uname
+        };
+        ws.send(JSON.stringify(user_info));
+        ws.close();
+    }
 
     // receiving message
     ws.onmessage = function(e) {
@@ -70,11 +86,10 @@
                 sender = msg.user + ' is ready!';
                 break;
             case 'handshake':
-                var user_info = {
+                ws.send(JSON.stringify({
                     'type': 'login',
                     'content': uname
-                };
-                ws.send(JSON.stringify(user_info));
+                }));
                 return;
             case 'login':
             case 'logout':
@@ -93,14 +108,7 @@
         listMsg(data);
     };
 
-    window.onbeforeunload = function() {　　
-        var user_info = {
-            'type': 'logout',
-            'content': uname
-        };
-        ws.send(JSON.stringify(user_info));
-        ws.close();
-    }
+    // -----------------
 
     function confirm(event) {
         var key_num = event.keyCode;
@@ -109,12 +117,6 @@
         } else {
             return false;
         }
-    }
-
-    // -----------------
-
-    function ready() {
-        ws.send(JSON.stringify({'type':'ready','from':uname}))
     }
 
     function send() {
@@ -129,6 +131,12 @@
         };
         ws.send(JSON.stringify(msg));
         msg_box.value = '';
+    }
+
+    // -----------------
+
+    function ready() {
+        ws.send(JSON.stringify({'type':'ready','from':uname}))
     }
 
     function act_y(){
