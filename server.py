@@ -269,12 +269,9 @@ def index():
 
 
 WebSocketServer(
-    ('0.0.0.0'),
-
     Resource([
         ('^/chat', ChatApplication),
         ('^/.*', DebuggedApplication(flask_app))
     ]),
-
     debug=False
 ).serve_forever()
