@@ -49,7 +49,7 @@
 
     // start with prompt
     var uname = prompt('Enter username', 'user' + uuid(8, 16));
-    var ws = new WebSocket("ws://ybdx.herokuapp.com/chat");
+    var ws = new WebSocket("wss://ybdx.herokuapp.com/chat");
     
     document.getElementById("username").innerHTML = uname;
 
